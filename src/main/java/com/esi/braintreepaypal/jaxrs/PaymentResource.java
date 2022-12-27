@@ -1,6 +1,7 @@
 package com.esi.braintreepaypal.jaxrs;
 
 
+import com.esi.braintreepaypal.dto.StoreInVaultResponse;
 import com.esi.braintreepaypal.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -29,9 +30,9 @@ public class PaymentResource {
     }
 
     @PostMapping("/storeInVault")
-    public void storeTransactionInVault(@RequestParam("nonceFromTheClient") String nonceFromTheClient,
-                                        @RequestParam("amount") BigDecimal amount, @RequestParam(value = "customerId", required = false) String customerId) {
-        paymentService.storeTransactionInVault(nonceFromTheClient, amount, customerId);
+    public StoreInVaultResponse storeTransactionInVault(@RequestParam("nonceFromTheClient") String nonceFromTheClient,
+                                                        @RequestParam("amount") BigDecimal amount, @RequestParam(value = "customerId", required = false) String customerId) {
+        return paymentService.storeTransactionInVault(nonceFromTheClient, amount, customerId);
 
     }
 
