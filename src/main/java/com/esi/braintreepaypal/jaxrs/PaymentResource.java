@@ -32,14 +32,20 @@ public class PaymentResource {
     @PostMapping("/storeInVault")
     public StoreInVaultResponse storeTransactionInVault(@RequestParam("nonceFromTheClient") String nonceFromTheClient,
                                                         @RequestParam("amount") BigDecimal amount, @RequestParam(value = "customerId", required = false) String customerId) {
-        return paymentService.storeTransactionInVault(nonceFromTheClient, amount, customerId);
+        return paymentService.newPaymentMethodAuthorization(nonceFromTheClient, amount, customerId);
 
     }
 
     @PostMapping("/vaultedPayment")
-    public void useVaultedPaymentMethod( @RequestParam("amount") BigDecimal amount,
-            @RequestParam(value = "customerId", required = false) String customerId, @RequestParam(value = "paymentMethodToken", required = false) String paymentMethodToken) {
-        paymentService.useVaultedPaymentMethod(customerId, paymentMethodToken, amount);
+    public StoreInVaultResponse useVaultedPaymentMethod( @RequestParam("amount") BigDecimal amount,
+            @RequestParam(value = "paymentMethodToken", required = false) String paymentMethodToken) {
+        return paymentService.vaultedPaymentMethodAuthorization(paymentMethodToken, amount);
+
+    }
+
+    @PostMapping("/submitForSettlement")
+    public void submitForSettlement( @RequestParam("transactionId") String transactionId) {
+        paymentService.submitForSettlement(transactionId);
 
     }
 

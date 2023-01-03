@@ -43,33 +43,22 @@ public class PaymentService {
 
     }
 
-    public StoreInVaultResponse storeTransactionInVault(String nonceFromTheClient, BigDecimal amount, String customerId) {
+    public StoreInVaultResponse newPaymentMethodAuthorization(String nonceFromTheClient, BigDecimal amount, String customerId) {
 
-        Result<Transaction> result = null;
+        TransactionRequest request = new TransactionRequest()
+                .amount(amount)
+                .paymentMethodNonce(nonceFromTheClient)
+                .options()
+                .storeInVaultOnSuccess(true)
+                .done();
+
         if (checkIfCustomerExist(customerId)) { //Existing customer with new payment method
-            TransactionRequest request = new TransactionRequest()
-                    .amount(amount)
-                    .paymentMethodNonce(nonceFromTheClient)
-                    .customerId(customerId)
-                    .options()
-                    .storeInVaultOnSuccess(true)
-                    .done();
-            result = gateway.transaction().sale(request);
-
+            request.customerId(customerId);
         } else { // New customer with new payment method
-            TransactionRequest request = new TransactionRequest()
-                    .amount(amount)
-                    .paymentMethodNonce(nonceFromTheClient)
-                    .customer()
-                    .id(customerId)
-                    .done()
-                    .options()
-                    .storeInVaultOnSuccess(true)
-                    .done();
-
-            result = gateway.transaction().sale(request);
-
+            request.customer().id(customerId).done();
         }
+
+        Result<Transaction> result = gateway.transaction().sale(request);
 
         StoreInVaultResponse response = new StoreInVaultResponse();
         response.setCustomerId(customerId);
@@ -78,10 +67,13 @@ public class PaymentService {
         if (result.isSuccess()) {
             Transaction transaction = result.getTarget();
             response.setSuccess(true);
+            response.setTransactionId(transaction.getId());
             if (transaction.getPayPalDetails() != null) {
                 response.setPaymentMethodToken(transaction.getPayPalDetails().getToken());
+                response.setPaymentMethodType("PayPal");
             } else if (transaction.getCreditCard() != null) {
                 response.setPaymentMethodToken(transaction.getCreditCard().getToken());
+                response.setPaymentMethodType("CreditCard");
             }
             System.out.println("Success ID: " + transaction.getId());
         } else {
@@ -92,24 +84,43 @@ public class PaymentService {
         return response;
     }
 
-    public void useVaultedPaymentMethod(String customerId, String paymentMethodToken, BigDecimal amount) {
+    public StoreInVaultResponse vaultedPaymentMethodAuthorization(String paymentMethodToken, BigDecimal amount) {
 
-        Result<Transaction> result = null;
-        if (customerId != null) {
-            TransactionRequest request = new TransactionRequest()
-                    .amount(amount)
-                    .customerId(customerId)
-                    .options().submitForSettlement(true).done();
+        TransactionRequest request = new TransactionRequest()
+                .amount(amount)
+                .paymentMethodToken(paymentMethodToken)
+                .options().submitForSettlement(false).done();
 
-            result = gateway.transaction().sale(request);
-        } else if (paymentMethodToken != null) {
-            TransactionRequest request = new TransactionRequest()
-                    .amount(amount)
-                    .paymentMethodToken(paymentMethodToken)
-                    .options().submitForSettlement(true).done();
+        Result<Transaction> result = gateway.transaction().sale(request);
 
-            result = gateway.transaction().sale(request);
+        StoreInVaultResponse response = new StoreInVaultResponse();
+        //response.setCustomerId(customerId);
+        response.setAmount(amount);
+
+
+        if (result.isSuccess()) {
+            Transaction transaction = result.getTarget();
+            System.out.println("Success ID: " + transaction.getId());
+            response.setSuccess(true);
+            response.setTransactionId(transaction.getId());
+            if (transaction.getPayPalDetails() != null) {
+                response.setPaymentMethodToken(transaction.getPayPalDetails().getToken());
+                response.setPaymentMethodType("PayPal");
+            } else if (transaction.getCreditCard() != null) {
+                response.setPaymentMethodToken(transaction.getCreditCard().getToken());
+                response.setPaymentMethodType("CreditCard");
+                response.setSuccess(false);
+            }
+
+        } else {
+            System.out.println("Message: " + result.getMessage());
         }
+
+        return response;
+    }
+
+    public void submitForSettlement(String transactionId) {
+        Result<Transaction> result = gateway.transaction().submitForSettlement(transactionId);
 
         if (result.isSuccess()) {
             Transaction transaction = result.getTarget();
@@ -117,6 +128,7 @@ public class PaymentService {
         } else {
             System.out.println("Message: " + result.getMessage());
         }
+
     }
 
     private boolean checkIfCustomerExist(String customerId) {

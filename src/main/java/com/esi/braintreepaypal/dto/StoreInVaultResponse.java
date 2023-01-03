@@ -12,4 +12,6 @@ public class StoreInVaultResponse {
     private String paymentMethodToken;
     private boolean isSuccess;
     private BigDecimal amount;
+    private String transactionId;
+    private String paymentMethodType;
 }
